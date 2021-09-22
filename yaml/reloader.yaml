@@ -1,0 +1,162 @@
+---
+# Source: serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    meta.helm.sh/reloaderspace: "enterprise-modeler-devops"
+    meta.helm.sh/reloader: "reloader"
+  labels:
+    app: reloader-reloader
+    chart: "reloader-v0.0.99"
+    release: "reloader"
+    heritage: "Helm"
+    app.kubernetes.io/managed-by: "Helm"
+  name: reloader-enterprise-modeler-devops
+---
+# Source: clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    meta.helm.sh/reloaderspace: "enterprise-modeler-devops"
+    meta.helm.sh/reloader: "reloader"
+  labels:
+    app: reloader-reloader
+    chart: "reloader-v0.0.99"
+    release: "reloader"
+    heritage: "Helm"
+    app.kubernetes.io/managed-by: "Helm"
+  name: reloader-enterprise-modeler-devops-role
+  namespace: enterprise-modeler-devops
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+      - configmaps
+    verbs:
+      - list
+      - get
+      - watch
+  - apiGroups:
+      - "apps"
+    resources:
+      - deployments
+      - daemonsets
+      - statefulsets
+    verbs:
+      - list
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - "apps.openshift.io"
+    resources:
+      - deploymentconfigs
+    verbs:
+      - list
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - "extensions"
+    resources:
+      - deployments
+      - daemonsets
+    verbs:
+      - list
+      - get
+      - update
+      - patch
+---
+# Source: clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    meta.helm.sh/reloaderspace: "enterprise-modeler-devops"
+    meta.helm.sh/reloader: "reloader"
+  labels:
+    app: reloader-reloader
+    chart: "reloader-v0.0.99"
+    release: "reloader"
+    heritage: "Helm"
+    app.kubernetes.io/managed-by: "Helm"
+  name: reloader-enterprise-modeler-devops-role-binding
+  namespace: enterprise-modeler-devops
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: reloader-enterprise-modeler-devops-role
+subjects:
+  - kind: ServiceAccount
+    name: reloader-enterprise-modeler-devops
+    namespace: enterprise-modeler-devops
+---
+# Source: Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    meta.helm.sh/reloaderspace: "enterprise-modeler-devops"
+    meta.helm.sh/reloader: "reloader"
+  labels:
+    app: reloader-reloader
+    chart: "reloader-v0.0.99"
+    release: "reloader"
+    heritage: "Helm"
+    app.kubernetes.io/managed-by: "Helm"
+    group: com.stakater.platform
+    provider: stakater
+    version: v0.0.99
+  name: reloader
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: reloader-reloader
+      release: "reloader"
+  template:
+    metadata:
+      labels:
+        app: reloader-reloader
+        chart: "reloader-v0.0.99"
+        release: "reloader"
+        heritage: "Helm"
+        app.kubernetes.io/managed-by: "Helm"
+        group: com.stakater.platform
+        provider: stakater
+        version: v0.0.99
+    spec:
+      containers:
+      - image: "quay.apps.lz-np2.ent-ocp4-useast1.aws.internal.das/enterprise-modeler/reloader:v0.0.99"
+        imagePullPolicy: IfNotPresent
+        name: reloader
+        env:
+        - name: KUBERNETES_NAMESPACE
+          value: enterprise-modeler-devops
+        ports:
+        - name: http
+          containerPort: 9090
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: http
+          timeoutSeconds: 5
+          failureThreshold: 5
+          periodSeconds: 10
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: http
+          timeoutSeconds: 5
+          failureThreshold: 5
+          periodSeconds: 10
+          successThreshold: 1
+      securityContext: 
+        runAsNonRoot: true
+        #runAsUser: 1003670008
+      serviceAccountName: reloader-enterprise-modeler-devops
